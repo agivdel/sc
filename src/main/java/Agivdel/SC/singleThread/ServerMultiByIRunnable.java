@@ -33,6 +33,7 @@ public class ServerMultiByIRunnable {
                 e.printStackTrace();
             }
         };
+        new Thread(sender).start();
 
         try {
             try {
@@ -43,7 +44,6 @@ public class ServerMultiByIRunnable {
                     NewClient newClient = new NewClient(client);
                     clientList.add(newClient);
                     new Thread(newClient).start();
-                    new Thread(sender).start();
                 }
             } finally {
                 server.close();
