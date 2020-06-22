@@ -34,7 +34,7 @@ public class Client2 {
                 try {
                     BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));//чтение с консоли
                     while (true) {
-//                        System.out.print(": ");
+                        System.out.print(": ");
                         String messageFromClient = reader.readLine();
                         if ("exit".equalsIgnoreCase(messageFromClient)) {
                             break;
