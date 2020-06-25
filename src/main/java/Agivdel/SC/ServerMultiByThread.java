@@ -1,4 +1,4 @@
-package Agivdel.SC.singleThread;
+package Agivdel.SC;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
