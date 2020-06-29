@@ -52,7 +52,7 @@ public class ServerMultiByIRunnable {
 
     private static void sendStory(NewClient newClient) throws IOException {
         if (story.size() > 0) {
-            newClient.sendMessage("Что тут уже успели обсудить:");
+            newClient.sendMessage("Последние сообщения:");
             for (String s : story) {
                 newClient.sendMessage(Thread.currentThread() + s);
             }
@@ -105,6 +105,7 @@ public class ServerMultiByIRunnable {
             this.OUT = new DataOutputStream(clientSocket.getOutputStream());
             this.clientSocket = clientSocket;
             this.name = "";
+            sendStory(this);
         }
 
         @Override
