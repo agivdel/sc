@@ -6,7 +6,7 @@ import java.net.Socket;
 public class Client {
 
     private static Socket clientSocket;
-    //    private static BufferedReader in;//вариант 1
+//    private static BufferedReader in;//вариант 1
     private static DataInputStream in;//вариант 2
     private static DataOutputStream out;
 
@@ -20,6 +20,7 @@ public class Client {
         try {
             try {
                 clientSocket = new Socket("localhost", 4050);
+//                in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
                 in = new DataInputStream(clientSocket.getInputStream());
                 out = new DataOutputStream(clientSocket.getOutputStream());
                 BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));//чтение с консоли
@@ -31,6 +32,7 @@ public class Client {
                 Runnable readMessage = () -> {
                     try {
                         while (true) {
+//                            String wordFromServer = in.readLine();//чтение с сервера
                             String wordFromServer = in.readUTF();//чтение с сервера
                             System.out.println(wordFromServer);//печать ответа сервера
                         }
@@ -70,7 +72,8 @@ public class Client {
         public void run() {
             try {
                 while (true) {
-                    String wordFromServer = in.readUTF();//чтение с сервера
+                    String wordFromServer = in.readLine();//чтение с сервера
+//                    String wordFromServer = in.readUTF();//чтение с сервера
                     System.out.println(wordFromServer);//печать ответа сервера
                 }
             } catch (IOException e) {

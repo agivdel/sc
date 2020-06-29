@@ -1,8 +1,6 @@
 package Agivdel.SC;
 
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.*;
@@ -79,7 +77,7 @@ public class ServerMultiByIRunnable {
                     System.out.println(message);
                     clientMap.forEach((clientName, client) -> { //перебираем все отображение
                         try {
-                            client.sendMessage(message);//каждому клиенту отправляем сообщение из очереди
+                            client.sendMessage(Thread.currentThread() + message);//каждому клиенту отправляем сообщение из очереди
                         } catch (IOException e) {
                             e.printStackTrace();
                         }
@@ -95,10 +93,14 @@ public class ServerMultiByIRunnable {
     static class NewClient implements Runnable {
         private final DataInputStream IN;
         private final DataOutputStream OUT;
+//        private final BufferedInputStream IN;
+//        private final BufferedOutputStream OUT;
         private final Socket clientSocket;
         private String name;
 
         public NewClient(Socket clientSocket) throws IOException {
+//            this.IN = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+//            this.OUT = new BufferedWriter(new OutputStreamWriter(clientSocket.getOutputStream()));
             this.IN = new DataInputStream(clientSocket.getInputStream());
             this.OUT = new DataOutputStream(clientSocket.getOutputStream());
             this.clientSocket = clientSocket;
@@ -111,10 +113,10 @@ public class ServerMultiByIRunnable {
                 name = nameRequest(this);//запрашиваем имя
                 clientMap.put(name, this);//создаем новую запись в отображении
                 QUEUE.put(Thread.currentThread() + preMessage(name) + " подключился.");
-                sendStory(this);
+//                sendStory(this);
                 while (true) {
                     String message = readMessage();
-                    QUEUE.put( preMessage(name) + message);
+                    QUEUE.put( Thread.currentThread() + preMessage(name) + message);
                 }
             } catch (IOException | InterruptedException e) {
                 try {
@@ -126,6 +128,7 @@ public class ServerMultiByIRunnable {
         }
 
         private void sendMessage(String message) throws IOException {
+//            OUT.write(message + "\n");
             OUT.writeUTF(message); //вариант для Data, "\n" ставится автоматом
             OUT.flush();
         }
@@ -138,6 +141,12 @@ public class ServerMultiByIRunnable {
             if (message.equalsIgnoreCase("list")) {
                 listClient();
             }
+            if (message.equalsIgnoreCase("size")) {
+                sendMessage("story size: " + story.size());
+            }
+            if (message.equalsIgnoreCase("story")) {
+                sendStory(this);
+            }
             return message;
         }
 
@@ -145,7 +154,7 @@ public class ServerMultiByIRunnable {
             clientSocket.close();
             IN.close();
             OUT.close();
-            QUEUE.put(preMessage(name) + " отключился.");
+            QUEUE.put(Thread.currentThread() + preMessage(name) + " отключился.");
             clientMap.remove(name);//удаление из списка клиентов
         }
 
