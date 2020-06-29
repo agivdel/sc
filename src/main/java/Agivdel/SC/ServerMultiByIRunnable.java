@@ -14,42 +14,19 @@ import java.util.concurrent.BlockingQueue;
  */
 public class ServerMultiByIRunnable {
     private static ServerSocket server;
-    private static final Map<NewClient, String> clientMap = Collections.synchronizedMap(new HashMap<>());//синхронизирующая (потокобезопасная) оболочка
+    private static final Map<String, NewClient> clientMap = Collections.synchronizedMap(new HashMap<>());//синхронизирующая (потокобезопасная) оболочка
     private static final BlockingQueue<String> QUEUE = new ArrayBlockingQueue<>(100);
     private static final ArrayList<String> story = new ArrayList<>();
 
-    public static void main(String[] args) throws IOException {
-
-        Runnable sender = () -> {
-            while (true) {
-                try {
-                    String message = QUEUE.take();//в бесконечном цикле берем первый элемент очереди
-                    clientMap.forEach((client, clientName) -> { //перебираем все отображение
-                        System.out.println(Thread.currentThread() + " sender to " + clientName);
-                        try {
-                            client.sendMessage(message);//каждому клиенту отправляем сообщение из очереди
-                            System.out.println(clientMap.get(client) + ": " + message);
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        }
-                    });
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-            }
-        };
-        new Thread(sender).start();//стартуем поток отправки сообщений
-
+    public static void main(String[] args) {
+        new Thread(new Sender()).start();//стартуем поток отправки сообщений
         try {
             try {
                 server = new ServerSocket(4050);
                 System.out.println("Сервер открыт");
                 while (true) {
                     Socket clientSocket = server.accept();
-                    NewClient newClient = new NewClient(clientSocket);//создаем объект на основе нового сокета
-                    String name = nameRequest(newClient);//запрашиваем имя
-                    clientMap.put(newClient, name);//создаем новую запись в отображении
-                    new Thread(newClient).start();//запускаем метод run() нового потока
+                    new Thread(new NewClient(clientSocket)).start();//создаем объект и запускаем run() нового потока
                 }
             } finally {
                 server.close();
@@ -60,59 +37,58 @@ public class ServerMultiByIRunnable {
         }
     }
 
-    private static String nameRequest(NewClient newClient) throws IOException {
-        newClient.sendMessage("Введите ваше имя");
+    private static String nameRequest(NewClient newClient) throws IOException, InterruptedException {
+        newClient.sendMessage(Thread.currentThread() + "Введите ваше имя");
         String name = newClient.readMessage();
-        //вариант №1 - с коллекцией значений
-        //если бы имя было ключом, можн было бы применить метод containsKey(name)
-        Collection <String> clientNames = clientMap.values();//из отображения берем коллекцию значений (строк с именами)
-        for (String clientName : clientNames) {
-            if (clientName.equals(name)) {
-                try {
-                    newClient.sendMessage("Это имя уже занято, выберите другое");
-                    nameRequest(newClient);//если имя занято, запрашиваем вновь
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
+        if (clientMap.containsKey(name)) {
+            try {
+                newClient.sendMessage("Это имя уже занято, выберите другое");
+                nameRequest(newClient);//если имя занято, запрашиваем вновь
+            } catch (IOException e) {
+                e.printStackTrace();
             }
         }
-
-        //вариант №2 - с отображением пар ключ-значение
-//        clientMap.forEach((client, clientName) -> {
-//            if (clientName.equals(name)) {
-//                try {
-//                    newClient.sendMessage("Это имя уже занято, выберите другое");
-//                    nameRequest(newClient);//если имя занято, запрашиваем вновь
-//                } catch (IOException e) {
-//                    e.printStackTrace();
-//                }
-//            }
-//        });
-
-        //вариант №3 - тоже с отображением пар ключ-значение, но подлиннее:
-//            for (Map.Entry<NewClient, String> entry : clientMap.entrySet()) {
-//                String k = entry.getKey();
-//                NewClient v = entry.getValue();
-//                if (k.equals(name)) {
-//                    try {
-//                        sendMessage("Это имя уже занято, выберите другое");
-//                        nameRequest();
-//                    } catch (IOException e) {
-//                        e.printStackTrace();
-//                    }
-//                }
-//            }
-        newClient.sendMessage("Приветствую, " + name + "!");
+        newClient.sendMessage("Приветствую, " + name + "! (Для закрытия соединения введите exit)");
         return name; //если совпадений имен нет, возвращаем введенное имя
     }
 
-    private static void sendStory() {
+    private static void sendStory(NewClient newClient) throws IOException {
+        if (story.size() > 0) {
+            newClient.sendMessage("Что тут уже успели обсудить:");
+            for (String s : story) {
+                newClient.sendMessage(Thread.currentThread() + s);
+            }
+            newClient.sendMessage("Конец истории.");
+        }
     }
 
     private static void listClient() {
         clientMap.forEach((k, v) -> {
-            System.out.println("socket: " + k + ", name: " + v);
+            System.out.println(", name: " + k + ", object: " + v);
         });
+    }
+
+
+    static class Sender implements Runnable {
+        @Override
+        public void run() {
+            while (true) {
+                try {
+                    String message = QUEUE.take();//в бесконечном цикле берем первый элемент очереди
+                    story.add(message);
+                    System.out.println(message);
+                    clientMap.forEach((clientName, client) -> { //перебираем все отображение
+                        try {
+                            client.sendMessage(message);//каждому клиенту отправляем сообщение из очереди
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                    });
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
     }
 
 
@@ -120,27 +96,30 @@ public class ServerMultiByIRunnable {
         private final DataInputStream IN;
         private final DataOutputStream OUT;
         private final Socket clientSocket;
+        private String name;
 
         public NewClient(Socket clientSocket) throws IOException {
             this.IN = new DataInputStream(clientSocket.getInputStream());
             this.OUT = new DataOutputStream(clientSocket.getOutputStream());
             this.clientSocket = clientSocket;
-//            sendStory();
+            this.name = "";
         }
 
         @Override
         public void run() {
             try {
-                System.out.println(Thread.currentThread());
-                QUEUE.put(clientMap.get(this) + " подключился.");
+                name = nameRequest(this);//запрашиваем имя
+                clientMap.put(name, this);//создаем новую запись в отображении
+                QUEUE.put(Thread.currentThread() + preMessage(name) + " подключился.");
+                sendStory(this);
                 while (true) {
                     String message = readMessage();
-                    QUEUE.put(clientMap.get(this) + ": " + message);
+                    QUEUE.put( preMessage(name) + message);
                 }
             } catch (IOException | InterruptedException e) {
                 try {
                     closeClient();
-                } catch (IOException ioException) {
+                } catch (IOException | InterruptedException ioException) {
                     ioException.printStackTrace();
                 }
             }
@@ -151,7 +130,7 @@ public class ServerMultiByIRunnable {
             OUT.flush();
         }
 
-        private String readMessage() throws IOException {
+        private String readMessage() throws IOException, InterruptedException {
             String message = IN.readUTF();
             if (message.equalsIgnoreCase("exit")) {
                 closeClient();
@@ -162,12 +141,16 @@ public class ServerMultiByIRunnable {
             return message;
         }
 
-        private void closeClient() throws IOException {
+        private void closeClient() throws IOException, InterruptedException {
             clientSocket.close();
             IN.close();
             OUT.close();
-            System.out.println(Thread.currentThread() + clientMap.get(this) + " отключился.");
-            clientMap.remove(this);//удаление из списка клиентов. ключ - объект класса NewClient
+            QUEUE.put(preMessage(name) + " отключился.");
+            clientMap.remove(name);//удаление из списка клиентов
+        }
+
+        private String preMessage (String name) {
+            return String.format("%tF, %<tT, %s: ", new Date(), name);
         }
     }
 }
