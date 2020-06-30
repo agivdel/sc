@@ -23,10 +23,6 @@ public class ServerMultiByThread {
                     Socket clientSocket = server.accept();
                     System.out.println("Подключение №" + i + " установлено");
                     i++;
-                    /**вариант №1:*/
-//                    NewThread newThread = new NewThread(clientSocket);//создание нового потока через объект наследника Thread
-//                    newThread.start();//запуск потока через вызов метода run()
-                    /**вариант №2: короче*/
                     new NewThread(clientSocket).start();
                 }
             } finally {
@@ -45,19 +41,22 @@ public class ServerMultiByThread {
     public static class NewThread extends Thread {
         private final DataInputStream IN;
         private final DataOutputStream OUT;
+        private final Socket clientSocket;
 
         public NewThread(Socket newClientSocket) throws IOException {
             IN = new DataInputStream(newClientSocket.getInputStream());
             OUT = new DataOutputStream(newClientSocket.getOutputStream());
+            clientSocket = newClientSocket;
         }
 
         @Override
         public void run() {
             try {
-                while (!isInterrupted()) {//возвращает ложь, пока поток не прерван
+                while (true) {//возвращает ложь, пока поток не прерван
                     String messageFromClient = IN.readUTF();
                     if ("exit".equalsIgnoreCase(messageFromClient)) {
                         System.out.println("Клиент отключился");
+                        clientSocket.close();
                         IN.close();//закрываем каналы этого клиента
                         OUT.close();
                     }

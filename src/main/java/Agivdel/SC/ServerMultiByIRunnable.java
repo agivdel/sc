@@ -60,12 +60,6 @@ public class ServerMultiByIRunnable {
         }
     }
 
-    private static void listClient() {
-        clientMap.forEach((k, v) -> {
-            System.out.println(", name: " + k + ", object: " + v);
-        });
-    }
-
 
     static class Sender implements Runnable {
         @Override
@@ -93,19 +87,15 @@ public class ServerMultiByIRunnable {
     static class NewClient implements Runnable {
         private final DataInputStream IN;
         private final DataOutputStream OUT;
-//        private final BufferedInputStream IN;
-//        private final BufferedOutputStream OUT;
         private final Socket clientSocket;
         private String name;
 
         public NewClient(Socket clientSocket) throws IOException {
-//            this.IN = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
-//            this.OUT = new BufferedWriter(new OutputStreamWriter(clientSocket.getOutputStream()));
             this.IN = new DataInputStream(clientSocket.getInputStream());
             this.OUT = new DataOutputStream(clientSocket.getOutputStream());
             this.clientSocket = clientSocket;
             this.name = "";
-            sendStory(this);
+            sendStory(this);//отсюда отправка истории работает без ошибок. работает поток main
         }
 
         @Override
@@ -114,7 +104,7 @@ public class ServerMultiByIRunnable {
                 name = nameRequest(this);//запрашиваем имя
                 clientMap.put(name, this);//создаем новую запись в отображении
                 QUEUE.put(Thread.currentThread() + preMessage(name) + " подключился.");
-//                sendStory(this);
+//                sendStory(this);//отсюда отпрпвка истории работает с ошибками
                 while (true) {
                     String message = readMessage();
                     QUEUE.put( Thread.currentThread() + preMessage(name) + message);
@@ -129,7 +119,6 @@ public class ServerMultiByIRunnable {
         }
 
         private void sendMessage(String message) throws IOException {
-//            OUT.write(message + "\n");
             OUT.writeUTF(message); //вариант для Data, "\n" ставится автоматом
             OUT.flush();
         }
@@ -138,9 +127,6 @@ public class ServerMultiByIRunnable {
             String message = IN.readUTF();
             if (message.equalsIgnoreCase("exit")) {
                 closeClient();
-            }
-            if (message.equalsIgnoreCase("list")) {
-                listClient();
             }
             if (message.equalsIgnoreCase("size")) {
                 sendMessage("story size: " + story.size());
@@ -163,5 +149,6 @@ public class ServerMultiByIRunnable {
             return String.format("%tF, %<tT, %s: ", new Date(), name);
         }
     }
+
 }
 
