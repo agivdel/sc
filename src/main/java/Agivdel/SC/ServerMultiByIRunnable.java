@@ -14,7 +14,7 @@ public class ServerMultiByIRunnable {
     private static ServerSocket server;
     private static final Map<String, NewClient> clientMap = Collections.synchronizedMap(new HashMap<>());//синхронизирующая (потокобезопасная) оболочка
     private static final BlockingQueue<String> QUEUE = new ArrayBlockingQueue<>(100);
-    private static final ArrayList<String> story = new ArrayList<>();
+    private static final List<String> story = new ArrayList<>();
 
     public static void main(String[] args) {
         new Thread(new Sender()).start();//стартуем поток отправки сообщений
@@ -36,15 +36,14 @@ public class ServerMultiByIRunnable {
     }
 
     private static String nameRequest(NewClient newClient) throws IOException, InterruptedException {
-        newClient.sendMessage(Thread.currentThread() + "Введите ваше имя");
-        String name = newClient.readMessage();
-        if (clientMap.containsKey(name)) {
-            try {
-                newClient.sendMessage("Это имя уже занято, выберите другое");
-                nameRequest(newClient);//если имя занято, запрашиваем вновь
-            } catch (IOException e) {
-                e.printStackTrace();
+        String name;
+        newClient.sendMessage("Введите ваше имя");
+        while (true) {
+            name = newClient.readMessage();
+            if (!clientMap.containsKey(name)) {
+                break;
             }
+            newClient.sendMessage("Это имя уже занято, выберите другое");
         }
         newClient.sendMessage("Приветствую, " + name + "! (Для закрытия соединения введите exit)");
         return name; //если совпадений имен нет, возвращаем введенное имя
@@ -54,7 +53,7 @@ public class ServerMultiByIRunnable {
         if (story.size() > 0) {
             newClient.sendMessage("Последние сообщения:");
             for (String s : story) {
-                newClient.sendMessage(Thread.currentThread() + s);
+                newClient.sendMessage(s);
             }
             newClient.sendMessage("Конец истории.");
         }
@@ -67,11 +66,11 @@ public class ServerMultiByIRunnable {
             while (true) {
                 try {
                     String message = QUEUE.take();//в бесконечном цикле берем первый элемент очереди
-                    story.add(message);
                     System.out.println(message);
+                    story.add(message);
                     clientMap.forEach((clientName, client) -> { //перебираем все отображение
                         try {
-                            client.sendMessage(Thread.currentThread() + message);//каждому клиенту отправляем сообщение из очереди
+                            client.sendMessage(message);//каждому клиенту отправляем сообщение из очереди
                         } catch (IOException e) {
                             e.printStackTrace();
                         }
@@ -103,11 +102,11 @@ public class ServerMultiByIRunnable {
             try {
                 name = nameRequest(this);//запрашиваем имя
                 clientMap.put(name, this);//создаем новую запись в отображении
-                QUEUE.put(Thread.currentThread() + preMessage(name) + " подключился.");
-//                sendStory(this);//отсюда отпрпвка истории работает с ошибками
+                QUEUE.put(preMessageHMS(name) + "подключился.");
+//                sendStory(this);//отсюда отправка истории работает с ошибками
                 while (true) {
                     String message = readMessage();
-                    QUEUE.put( Thread.currentThread() + preMessage(name) + message);
+                    QUEUE.put( preMessageHMS(name) + message);
                 }
             } catch (IOException | InterruptedException e) {
                 try {
@@ -141,12 +140,16 @@ public class ServerMultiByIRunnable {
             clientSocket.close();
             IN.close();
             OUT.close();
-            QUEUE.put(Thread.currentThread() + preMessage(name) + " отключился.");
+            QUEUE.put(preMessageHMS(name) + "отключился.");
             clientMap.remove(name);//удаление из списка клиентов
         }
 
-        private String preMessage (String name) {
+        private String preMessageYMDHMS (String name) {
             return String.format("%tF, %<tT, %s: ", new Date(), name);
+        }
+
+        private String preMessageHMS (String name) {
+            return String.format("%tT, %s: ", new Date(), name);
         }
     }
 
