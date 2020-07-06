@@ -110,7 +110,7 @@ class ClientBot {
         try {
             FIRST = FileToColl.toArray(pathname1);
             SECOND = FileToColl.toArray(pathname2);
-            NAMES_LIST = Collections.synchronizedList(new ArrayList<>(FileToColl.toArrayList(pathname3)));
+            NAMES_LIST = FileToColl.toArrayList(pathname3);
         } catch (IOException e) {
             e.printStackTrace();
         }
