@@ -2,6 +2,9 @@ package Agivdel.SC;
 
 import java.io.*;
 import java.net.Socket;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.*;
 
 public class Client {
@@ -20,8 +23,8 @@ public class Client {
     }
 
     public static void main(String[] args) throws IOException, InterruptedException {
-//        new Client().botTalk(20);
-        new Client().talk();
+        new Client().botTalk(4);
+//        new Client().talk();
     }
 
     public void talk() throws IOException {//вариант с ручным управлением диалогом
@@ -32,10 +35,10 @@ public class Client {
         }
     }
 
-    public void botTalk(int counter) throws IOException, InterruptedException {//вариант с диалогом бота
+    public void botTalk(int numberOfMessages) throws IOException, InterruptedException {//вариант с диалогом бота
         ClientBot bot = new ClientBot();//вначале создаем объект бота
         if (bot.requestBotName()) {
-            for (int i = 0; i < counter; i++) {
+            for (int i = 0; i < numberOfMessages; i++) {
                 String message = readServer();
                 System.out.println(message);
                 try {
@@ -53,8 +56,8 @@ public class Client {
     }
 
     static String readConsole() throws IOException {
-        BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));//чтение с консоли
-        String messageFromConsole = reader.readLine();
+        Scanner scanner = new Scanner(System.in);
+        String messageFromConsole = scanner.nextLine();
         if ("exit".equalsIgnoreCase(messageFromConsole)) {
             closeClient();
         }
@@ -102,29 +105,29 @@ class ClientBot {
     private static final String pathname2 = "C:/Users/agivd/IdeaProjects/SC/src/main/resources/the second part of message.txt";
     private static final String pathname3 = "C:/Users/agivd/IdeaProjects/SC/src/main/resources/bot names.txt";
 
-    private static String[] FIRST;
-    private static String[] SECOND;
-    private static List<String> NAMES_LIST;
+    private static List<String> FIRST;
+    private static List<String> SECOND;
+    private static List<String> NAMES;
 
     static {
         try {
-            FIRST = FileToColl.toArray(pathname1);
-            SECOND = FileToColl.toArray(pathname2);
-            NAMES_LIST = FileToColl.toArrayList(pathname3);
+            FIRST = Files.readAllLines(Paths.get(pathname1), StandardCharsets.UTF_8);
+            SECOND = Files.readAllLines(Paths.get(pathname2), StandardCharsets.UTF_8);
+            NAMES = Files.readAllLines(Paths.get(pathname3), StandardCharsets.UTF_8);
         } catch (IOException e) {
             e.printStackTrace();
         }
-        Collections.shuffle(NAMES_LIST);//перемешиваем список
+        Collections.shuffle(NAMES);//перемешиваем список
     }
 
     public ClientBot() {
-        name = NAMES_LIST.remove(0);//для вновь созданного бота вынимаем первое имя из списка
+        name = NAMES.remove(0);//для вновь созданного бота вынимаем первое имя из списка
     }
 
     public String messageConstructor() {
-        int i = (int)(Math.random()*FIRST.length);
-        int j = (int)(Math.random()*SECOND.length);
-        return FIRST[i] + SECOND[j];
+        int i = (int)(Math.random()*FIRST.size());
+        int j = (int)(Math.random()*SECOND.size());
+        return FIRST.get(i) + SECOND.get(j);
     }
 
     public boolean requestBotName() throws IOException {
@@ -142,7 +145,7 @@ class ClientBot {
     }
 
     private String getNewName() {
-        setName(NAMES_LIST.remove(0));
+        setName(NAMES.remove(0));
         return getName();
     }
 

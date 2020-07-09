@@ -12,7 +12,7 @@ import java.util.concurrent.BlockingQueue;
  */
 public class ServerMultiByIRunnable {
     private static ServerSocket server;
-    private static final Map<String, NewClient> clientMap = Collections.synchronizedMap(new HashMap<>());//синхронизирующая (потокобезопасная) оболочка
+    private static final Map<String, Client> clients = Collections.synchronizedMap(new HashMap<>());//синхронизирующая (потокобезопасная) оболочка
     private static final BlockingQueue<String> QUEUE = new ArrayBlockingQueue<>(100);
     private static final List<String> story = new ArrayList<>();
 
@@ -24,7 +24,7 @@ public class ServerMultiByIRunnable {
                 System.out.println("Сервер открыт");
                 while (true) {
                     Socket clientSocket = server.accept();
-                    new Thread(new NewClient(clientSocket)).start();//создаем объект и запускаем run() нового потока
+                    new Thread(new Client(clientSocket)).start();//создаем объект и запускаем run() нового потока
                 }
             } finally {
                 server.close();
@@ -35,27 +35,27 @@ public class ServerMultiByIRunnable {
         }
     }
 
-    private static String nameRequest(NewClient newClient) throws IOException, InterruptedException {
+    private static String nameRequest(Client client) throws IOException, InterruptedException {
         String name;
-        newClient.sendMessage("Введите ваше имя");
+        client.sendMessage("Введите ваше имя");
         while (true) {
-            name = newClient.readMessage();
-            if (!clientMap.containsKey(name)) {
+            name = client.readMessage();
+            if (!clients.containsKey(name)) {
                 break;
             }
-            newClient.sendMessage("Это имя уже занято, выберите другое");
+            client.sendMessage("Это имя уже занято, выберите другое");
         }
-        newClient.sendMessage("Приветствую, " + name + "! (Для закрытия соединения введите exit)");
+        client.sendMessage("Приветствую, " + name + "! (Для закрытия соединения введите exit)");
         return name; //если совпадений имен нет, возвращаем введенное имя
     }
 
-    private static void sendStory(NewClient newClient) throws IOException {
+    private static void sendStory(Client client) throws IOException {
         if (story.size() > 0) {
-            newClient.sendMessage("Последние сообщения:");
+            client.sendMessage("Последние сообщения:");
             for (String s : story) {
-                newClient.sendMessage(s);
+                client.sendMessage(s);
             }
-            newClient.sendMessage("Конец истории.");
+            client.sendMessage("Конец истории.");
         }
     }
 
@@ -68,7 +68,7 @@ public class ServerMultiByIRunnable {
                     String message = QUEUE.take();//в бесконечном цикле берем первый элемент очереди
                     System.out.println(message);
                     story.add(message);
-                    clientMap.forEach((clientName, client) -> { //перебираем все отображение
+                    clients.forEach((clientName, client) -> { //перебираем все отображение
                         try {
                             client.sendMessage(message);//каждому клиенту отправляем сообщение из очереди
                         } catch (IOException e) {
@@ -83,13 +83,13 @@ public class ServerMultiByIRunnable {
     }
 
 
-    static class NewClient implements Runnable {
+    static class Client implements Runnable {
         private final DataInputStream IN;
         private final DataOutputStream OUT;
         private final Socket clientSocket;
         private String name;
 
-        public NewClient(Socket clientSocket) throws IOException {
+        public Client(Socket clientSocket) throws IOException {
             this.IN = new DataInputStream(clientSocket.getInputStream());
             this.OUT = new DataOutputStream(clientSocket.getOutputStream());
             this.clientSocket = clientSocket;
@@ -101,7 +101,7 @@ public class ServerMultiByIRunnable {
         public void run() {
             try {
                 name = nameRequest(this);//запрашиваем имя
-                clientMap.put(name, this);//создаем новую запись в отображении
+                clients.put(name, this);//создаем новую запись в отображении
                 QUEUE.put(preMessageHMS(name) + "подключился.");
 //                sendStory(this);//отсюда отправка истории работает с ошибками
                 while (true) {
@@ -141,7 +141,7 @@ public class ServerMultiByIRunnable {
             IN.close();
             OUT.close();
             QUEUE.put(preMessageHMS(name) + "отключился.");
-            clientMap.remove(name);//удаление из списка клиентов
+            clients.remove(name);//удаление из списка клиентов
         }
 
         private String preMessageYMDHMS (String name) {
