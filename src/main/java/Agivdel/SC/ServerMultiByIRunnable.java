@@ -3,6 +3,7 @@ package Agivdel.SC;
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
@@ -144,12 +145,8 @@ public class ServerMultiByIRunnable {
             clients.remove(name);//удаление из списка клиентов
         }
 
-        private String preMessageYMDHMS (String name) {
-            return String.format("%tF, %<tT, %s: ", new Date(), name);
-        }
-
         private String preMessageHMS (String name) {
-            return String.format("%tT, %s: ", new Date(), name);
+            return new SimpleDateFormat("HH:mm:ss, ").format(new Date()) + name + ":";
         }
     }
 

@@ -9,9 +9,9 @@ import java.util.*;
 
 public class Client {
 
-    private static Socket clientSocket;
-    private static DataInputStream IN;
-    private static DataOutputStream OUT;
+    private Socket clientSocket;
+    private DataInputStream IN;
+    private DataOutputStream OUT;
     private static final String IP = "localhost";
     private static final int PORT = 4050;
 
@@ -24,21 +24,27 @@ public class Client {
 
     public static void main(String[] args) throws IOException, InterruptedException {
         new Client().botTalk(4);
-//        new Client().talk();
+        new Client().botTalk(3);
+//        Client client = new Client();
+//        client.talk();
+        new Client().talk();
     }
 
-    public void talk() throws IOException {//вариант с ручным управлением диалогом
-        new Thread(new ReadMessage()).start();//чтение с сервера в отдельном потоке
+    private void talk() throws IOException, InterruptedException {//вариант с ручным управлением диалогом
+        Thread serverReader = new Thread(new ReadMessage());
+        serverReader.start();
+//        new Thread(new ReadMessage()).start();//чтение с сервера в отдельном потоке
         while (!clientSocket.isOutputShutdown()) {
             String message = readConsole();//чтение с консоли и отправка на сервре - в потоке main
             sendMessage(message);
         }
+
     }
 
-    public void botTalk(int numberOfMessages) throws IOException, InterruptedException {//вариант с диалогом бота
-        ClientBot bot = new ClientBot();//вначале создаем объект бота
+    private void botTalk(int numberOfMessages) throws IOException, InterruptedException {//вариант с диалогом бота
+        ClientBot bot = new ClientBot(this);//вначале создаем объект бота
         if (bot.requestBotName()) {
-            for (int i = 0; i < numberOfMessages; i++) {
+            for (int i = 0; i <= numberOfMessages; i++) {
                 String message = readServer();
                 System.out.println(message);
                 try {
@@ -51,11 +57,11 @@ public class Client {
         }
     }
 
-    static String readServer() throws IOException {
+    private String readServer() throws IOException {
         return IN.readUTF();
     }
 
-    static String readConsole() throws IOException {
+    private String readConsole() throws IOException {
         Scanner scanner = new Scanner(System.in);
         String messageFromConsole = scanner.nextLine();
         if ("exit".equalsIgnoreCase(messageFromConsole)) {
@@ -64,26 +70,23 @@ public class Client {
         return messageFromConsole;
     }
 
-    static void sendMessage(String message) throws IOException {
+    private void sendMessage(String message) throws IOException {
         OUT.writeUTF(message);
         OUT.flush();
     }
 
-    static void closeClient() throws IOException {
+    private void closeClient() throws IOException {
         IN.close();//если случился break, сначала закрываем каналы
         OUT.close();
         clientSocket.close();//потом закрываем сокет
         System.out.println("Вы отключились");
-    }
 
-    public static String preMessage() {
-        return String.format("%tH:%<tM:%<tS:%<tL: ", new Date());
     }
 
     /**
      * для клиентов с ручным управленеим чтение сообщений с сервера в отдельном потоке
      */
-    static class ReadMessage implements Runnable {
+    class ReadMessage implements Runnable {
         @Override
         public void run() {
             try {
@@ -96,64 +99,68 @@ public class Client {
             }
         }
     }
-}
 
-class ClientBot {
-    private String name;
 
-    private static final String pathname1 = "C:/Users/agivd/IdeaProjects/SC/src/main/resources/the first part of message.txt";
-    private static final String pathname2 = "C:/Users/agivd/IdeaProjects/SC/src/main/resources/the second part of message.txt";
-    private static final String pathname3 = "C:/Users/agivd/IdeaProjects/SC/src/main/resources/bot names.txt";
+    static class ClientBot {
+        private String name;
+        private final Client client;
 
-    private static List<String> FIRST;
-    private static List<String> SECOND;
-    private static List<String> NAMES;
+        private static final String pathname1 = "C:/Users/agivd/IdeaProjects/SC/src/main/resources/the first part of message.txt";
+        private static final String pathname2 = "C:/Users/agivd/IdeaProjects/SC/src/main/resources/the second part of message.txt";
+        private static final String pathname3 = "C:/Users/agivd/IdeaProjects/SC/src/main/resources/bot names.txt";
 
-    static {
-        try {
-            FIRST = Files.readAllLines(Paths.get(pathname1), StandardCharsets.UTF_8);
-            SECOND = Files.readAllLines(Paths.get(pathname2), StandardCharsets.UTF_8);
-            NAMES = Files.readAllLines(Paths.get(pathname3), StandardCharsets.UTF_8);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        Collections.shuffle(NAMES);//перемешиваем список
-    }
+        private static List<String> FIRST;
+        private static List<String> SECOND;
+        private static List<String> NAMES;
 
-    public ClientBot() {
-        name = NAMES.remove(0);//для вновь созданного бота вынимаем первое имя из списка
-    }
-
-    public String messageConstructor() {
-        int i = (int)(Math.random()*FIRST.size());
-        int j = (int)(Math.random()*SECOND.size());
-        return FIRST.get(i) + SECOND.get(j);
-    }
-
-    public boolean requestBotName() throws IOException {
-        while (true) {
-            String message = Client.readServer();
-            if(message.equalsIgnoreCase("Введите ваше имя")) {
-                Client.sendMessage(getName());
-            }if(message.equalsIgnoreCase("Это имя уже занято, выберите другое")) {
-                Client.sendMessage(getNewName());
-            }if(message.contains("Приветствую, ")) {
-                break;
+        static {
+            try {
+                FIRST = Files.readAllLines(Paths.get(pathname1), StandardCharsets.UTF_8);
+                SECOND = Files.readAllLines(Paths.get(pathname2), StandardCharsets.UTF_8);
+                NAMES = Files.readAllLines(Paths.get(pathname3), StandardCharsets.UTF_8);
+            } catch (IOException e) {
+                e.printStackTrace();
             }
+            Collections.shuffle(NAMES);//перемешиваем список
         }
-        return true;
-    }
 
-    private String getNewName() {
-        setName(NAMES.remove(0));
-        return getName();
-    }
+        public ClientBot(Client client) {
+            this.client = client;
+            name = NAMES.remove(0);//для вновь созданного бота вынимаем первое имя из списка
+        }
 
-    public String getName() {
-        return name;
-    }
+        private String messageConstructor() {
+            int i = (int)(Math.random()*FIRST.size());
+            int j = (int)(Math.random()*SECOND.size());
+            return FIRST.get(i) + SECOND.get(j);
+        }
 
-    public void setName(String name) {
-        this.name = name;
+        private boolean requestBotName() throws IOException {
+            while (true) {
+                String message = client.readServer();
+                if(message.equalsIgnoreCase("Введите ваше имя")) {
+                    client.sendMessage(getName());
+                }if(message.equalsIgnoreCase("Это имя уже занято, выберите другое")) {
+                    client.sendMessage(getNewName());
+                }if(message.contains("Приветствую, ")) {
+                    break;
+                }
+            }
+            return true;
+        }
+
+        private String getNewName() {
+            setName(NAMES.remove(0));
+            return getName();
+        }
+
+        private String getName() {
+            return name;
+        }
+
+        private void setName(String name) {
+            this.name = name;
+        }
     }
 }
+
