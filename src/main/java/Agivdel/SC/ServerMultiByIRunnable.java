@@ -25,7 +25,8 @@ public class ServerMultiByIRunnable {
                 System.out.println("Сервер открыт");
                 while (true) {
                     Socket clientSocket = server.accept();
-                    new Thread(new Client(clientSocket)).start();//создаем объект и запускаем run() нового потока
+                    Client aClient = new Client(clientSocket);
+                    new Thread(new Reader(aClient)).start();
                 }
             } finally {
                 server.close();
@@ -84,29 +85,24 @@ public class ServerMultiByIRunnable {
     }
 
 
-    static class Client implements Runnable {
-        private final DataInputStream IN;
-        private final DataOutputStream OUT;
-        private final Socket clientSocket;
+    static class Reader implements Runnable {
+        private final Client client;
         private String name;
 
-        public Client(Socket clientSocket) throws IOException {
-            this.IN = new DataInputStream(clientSocket.getInputStream());
-            this.OUT = new DataOutputStream(clientSocket.getOutputStream());
-            this.clientSocket = clientSocket;
-            this.name = "";
-            sendStory(this);//отсюда отправка истории работает без ошибок. работает поток main
-        }
 
+        public Reader (Client client) {
+            this.client = client;
+            System.out.println(Thread.currentThread() + "constructor is starting");
+        }
         @Override
         public void run() {
             try {
-                name = nameRequest(this);//запрашиваем имя
-                clients.put(name, this);//создаем новую запись в отображении
+                sendStory(client);//можно отсюда, а можно из конструктора
+                name = nameRequest(client);//запрашиваем имя
+                clients.put(name, client);//создаем новую запись в отображении
                 QUEUE.put(preMessageHMS(name) + "подключился.");
-//                sendStory(this);//отсюда отправка истории работает с ошибками
                 while (true) {
-                    String message = readMessage();
+                    String message = client.readMessage();
                     QUEUE.put( preMessageHMS(name) + message);
                 }
             } catch (IOException | InterruptedException e) {
@@ -118,37 +114,15 @@ public class ServerMultiByIRunnable {
             }
         }
 
-        private void sendMessage(String message) throws IOException {
-            OUT.writeUTF(message); //вариант для Data, "\n" ставится автоматом
-            OUT.flush();
-        }
-
-        private String readMessage() throws IOException, InterruptedException {
-            String message = IN.readUTF();
-            if (message.equalsIgnoreCase("exit")) {
-                closeClient();
-            }
-            if (message.equalsIgnoreCase("size")) {
-                sendMessage("story size: " + story.size());
-            }
-            if (message.equalsIgnoreCase("story")) {
-                sendStory(this);
-            }
-            return message;
-        }
-
         private void closeClient() throws IOException, InterruptedException {
-            clientSocket.close();
-            IN.close();
-            OUT.close();
-            QUEUE.put(preMessageHMS(name) + "отключился.");
-            clients.remove(name);//удаление из списка клиентов
+            client.closeClient();
+            QUEUE.put(preMessageHMS(name) + "отключился.");//
+            clients.remove(name);//удаление из списка клиентов//
         }
 
         private String preMessageHMS (String name) {
-            return new SimpleDateFormat("HH:mm:ss, ").format(new Date()) + name + ":";
+            return new SimpleDateFormat("HH:mm:ss, ").format(new Date()) + name + ": ";
         }
     }
-
 }
 
