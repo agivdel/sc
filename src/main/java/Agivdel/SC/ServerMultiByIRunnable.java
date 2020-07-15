@@ -37,7 +37,7 @@ public class ServerMultiByIRunnable {
         }
     }
 
-    private static String nameRequest(Client client) throws IOException, InterruptedException {
+    private static String nameRequest(Client client) throws IOException {
         String name;
         client.sendMessage("Введите ваше имя");
         while (true) {
@@ -89,11 +89,10 @@ public class ServerMultiByIRunnable {
         private final Client client;
         private String name;
 
-
         public Reader (Client client) {
             this.client = client;
-            System.out.println(Thread.currentThread() + "constructor is starting");
         }
+
         @Override
         public void run() {
             try {

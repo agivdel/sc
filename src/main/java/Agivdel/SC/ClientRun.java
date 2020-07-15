@@ -11,18 +11,56 @@ public class ClientRun {
 
         //для человека
         Client client = new Client("localhost", 4050);
-//        new Thread(client.new ReadAndPrint()).start();//вложенный класс нестатический, тюею принадлежит конкретному объекту
+        //запуск отдельного потока чтения с сервера №1
+//        new Thread(client.new ReadAndPrint()).start();//вложенный класс нестатический, т.е. принадлежит конкретному объекту
+        //запуск отдельного потока чтения с сервера №2
 //        ex.submit(client.new ReadAndPrint());//еще один вариант запуска отдельного потока чтения с сервера
-//        ex.submit(new HomoTalk(client));//отдельный поток работы клиентской части вариант №1
-//        ex.submit(new HomoTalk(new Client("localhost", 4050)));//отдельный поток работы клиентской части вариант №2
+        //запуск отдельного потока чтения с сервера №3
+        ex.submit(() -> {
+            while (!client.getCLIENT_SOCKET().isOutputShutdown()) {
+                try {
+                    client.readAndPrint();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+        //отдельный поток работы клиентской части вариант №1
+        ex.submit(new HomoTalk(client));
+        //отдельный поток работы клиентской части вариант №2
+//        ex.submit(new HomoTalk(new Client("localhost", 4050)));
 
         //для бота
-        ex.submit(new BotTalk(client, 8));
-
-
-
+//        ex.submit(new BotTalk(client, 8));
     }
 }
+
+
+class HomoTalk implements Runnable {
+    Client client;
+
+    public HomoTalk(Client client) {
+        this.client = client;
+    }
+
+    @Override
+    public void run() {
+        while (!client.getCLIENT_SOCKET().isOutputShutdown()) {
+            String message;//чтение с консоли и отправка на сервер - в потоке main
+            try {
+                message = client.readConsole();
+                if (message.equalsIgnoreCase("exit")) {
+                    client.closeClient();
+                    System.out.println("Вы отключились");
+                }
+                client.sendMessage(message);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+}
+
 
 class BotTalk implements Runnable {
     Client client;
@@ -51,32 +89,6 @@ class BotTalk implements Runnable {
             }
         } catch (IOException e) {
             e.printStackTrace();
-        }
-    }
-}
-
-
-class HomoTalk implements Runnable {
-    Client client;
-
-    public HomoTalk (Client client) {
-        this.client = client;
-    }
-
-    @Override
-    public void run() {
-        while (!client.getCLIENT_SOCKET().isOutputShutdown()) {
-            String message;//чтение с консоли и отправка на сервер - в потоке main
-            try {
-                message = client.readConsole();
-                if (message.equalsIgnoreCase("exit")) {
-                    client.closeClient();
-                    System.out.println("Вы отключились");
-                }
-                client.sendMessage(message);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
         }
     }
 }

@@ -57,15 +57,16 @@ public class Client {
 
 
 
+    //класс может быть заменен на лямбда-функцию, преобразованную в функциональный интерфейс
     public class ReadAndPrint implements Runnable {
         @Override
         public void run() {
             System.out.println("ReadAndPrint is starting!");
             try {
                 while (true) {
-                    readAndPrint();
 //                    String message = readMessage();//чтение с сервера
 //                    System.out.println(message);//печать ответа сервера
+                    readAndPrint();
                 }
             } catch (IOException e) {
                 e.printStackTrace();
