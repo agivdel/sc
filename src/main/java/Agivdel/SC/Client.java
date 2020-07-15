@@ -31,8 +31,8 @@ public class Client {
     }
 
     void readAndPrint() throws IOException {
-            String message = readMessage();
-            System.out.println(message);
+        String message = readMessage();
+        System.out.println(message);
     }
 
     void sendMessage(String message) throws IOException {
@@ -54,7 +54,6 @@ public class Client {
     public Socket getCLIENT_SOCKET() {
         return CLIENT_SOCKET;
     }
-
 
 
     //класс может быть заменен на лямбда-функцию, преобразованную в функциональный интерфейс

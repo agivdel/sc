@@ -11,23 +11,23 @@ public class ClientRun {
 
         //для человека
         Client client = new Client("localhost", 4050);
-        //запуск отдельного потока чтения с сервера №1
+        //запуск отдельного потока чтения с сервера, №1
 //        new Thread(client.new ReadAndPrint()).start();//вложенный класс нестатический, т.е. принадлежит конкретному объекту
-        //запуск отдельного потока чтения с сервера №2
-//        ex.submit(client.new ReadAndPrint());//еще один вариант запуска отдельного потока чтения с сервера
-        //запуск отдельного потока чтения с сервера №3
+        //запуск отдельного потока чтения с сервера, №2
+//        ex.submit(client.new ReadAndPrint());
+        //запуск отдельного потока чтения с сервера, №3
         ex.submit(() -> {
-            while (!client.getCLIENT_SOCKET().isOutputShutdown()) {
-                try {
+            try {
+                while (!client.getCLIENT_SOCKET().isOutputShutdown()) {
                     client.readAndPrint();
-                } catch (IOException e) {
-                    e.printStackTrace();
                 }
+            } catch (IOException e) {
+                e.printStackTrace();
             }
         });
-        //отдельный поток работы клиентской части вариант №1
+        //отдельный поток работы клиентской части вариант, №1
         ex.submit(new HomoTalk(client));
-        //отдельный поток работы клиентской части вариант №2
+        //отдельный поток работы клиентской части вариант, №2
 //        ex.submit(new HomoTalk(new Client("localhost", 4050)));
 
         //для бота
