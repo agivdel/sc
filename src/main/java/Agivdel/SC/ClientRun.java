@@ -9,29 +9,31 @@ public class ClientRun {
     public static void main(String[] args) throws IOException {
         ExecutorService ex = Executors.newCachedThreadPool();
 
-        //для человека
-        Client client = new Client("localhost", 4050);
+//        Client client = new Client("localhost", 4050);
         //запуск отдельного потока чтения с сервера, №1
 //        new Thread(client.new ReadAndPrint()).start();//вложенный класс нестатический, т.е. принадлежит конкретному объекту
         //запуск отдельного потока чтения с сервера, №2
 //        ex.submit(client.new ReadAndPrint());
         //запуск отдельного потока чтения с сервера, №3
-        ex.submit(() -> {
-            try {
-                while (!client.getCLIENT_SOCKET().isOutputShutdown()) {
-                    client.readAndPrint();
-                }
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        });
+//        ex.submit(() -> {
+//            try {
+//                while (true) {
+//                    client.readAndPrint();
+//                }
+//            } catch (IOException e) {
+//                e.printStackTrace();
+//            }
+//        });
+
+        //для человека
         //отдельный поток работы клиентской части вариант, №1
-        ex.submit(new HomoTalk(client));
+//        ex.submit(new HomoTalk(client));
         //отдельный поток работы клиентской части вариант, №2
 //        ex.submit(new HomoTalk(new Client("localhost", 4050)));
 
         //для бота
 //        ex.submit(new BotTalk(client, 8));
+        ex.submit(new BotTalk(new Client("localhost", 4050), 8));
     }
 }
 
@@ -45,7 +47,7 @@ class HomoTalk implements Runnable {
 
     @Override
     public void run() {
-        while (!client.getCLIENT_SOCKET().isOutputShutdown()) {
+        while (/*!client.getCLIENT_SOCKET().isOutputShutdown()*/ true) {
             String message;//чтение с консоли и отправка на сервер - в потоке main
             try {
                 message = client.readConsole();

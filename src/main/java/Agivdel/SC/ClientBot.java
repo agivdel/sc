@@ -11,9 +11,9 @@ class ClientBot {
     private String name;
     private final Client client;
 
-    private static final String pathname1 = "C:/Users/agivd/IdeaProjects/SC/src/main/resources/the first part of message.txt";
-    private static final String pathname2 = "C:/Users/agivd/IdeaProjects/SC/src/main/resources/the second part of message.txt";
-    private static final String pathname3 = "C:/Users/agivd/IdeaProjects/SC/src/main/resources/bot names.txt";
+    private static final String pathname1 = "resources/the first part of message.txt";
+    private static final String pathname2 = "resources/the second part of message.txt";
+    private static final String pathname3 = "resources/bot names.txt";
 
     private static List<String> FIRST;
     private static List<String> SECOND;
